@@ -154,8 +154,8 @@ const logoutUser = asyncHandler(async(req, res) => {
     User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1 // this remove the field from document
             }
         },
         {
@@ -235,19 +235,25 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
     const {fullName, email} = req.body
 
     if (!fullName || !email) {
-        throw new ApiError(400 ,"All fields are required");
+        throw new ApiError(400, "All fields are required")
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                fullName,
+                email: email
+            }
+        },
+        {new: true}
         
-    }
+    ).select("-password")
 
-   const user = await User.findByIdAndUpdate(req.user._id, {
-    $set: {
-        fullName,
-        email
-    }
-   }, {new: true})
-}).select("-password")
-
-return res.status(200).json(new ApiResponse(200, user, "Account details updated successfully"))
+    return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Account details updated successfully"))
+});
 
 const UpdateUserAvatar = asyncHandler(async(req, res) => {
     const avatarLocalPath = req.file?.path
@@ -367,7 +373,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
         )
 })
 
-const getWatchHistory = asyncHandler(async(res, res) => {
+const getWatchHistory = asyncHandler(async(req, res) => {
     const user = await User.aggregate([
         {
             $match:{
@@ -411,7 +417,7 @@ const getWatchHistory = asyncHandler(async(res, res) => {
         }
     ])
     
-    return res.status.json(new ApiResponse(200, user[0],watchHistory, "watch history feteched successfully"))
+    return res.status(200).json(new ApiResponse(200, user[0].watchHistory , "watch history feteched successfully"))
 })
 
 
